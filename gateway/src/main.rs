@@ -1,4 +1,4 @@
-use axum::extract::Query;
+use axum::extract::{Query, Path};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::Json;
@@ -7,18 +7,20 @@ use lib::database::world::{Command, Turtle};
 use lib::database::Database;
 use lib::events::{BlockEvent, EventStream, LogEvent, TurtleEvent};
 
+pub const NATS:&'static str = "127.0.0.1";
+
 #[tokio::main]
 async fn main() {
-    let ip = String::from("127.0.0.1");
+    let ip = String::from(NATS);
     let port = String::from("8080");
-    let mut nc = nats::connect("nats").unwrap();
+    let mut nc = nats::connect(NATS).unwrap();
     EventStream::Logs
         .publish(&mut nc, LogEvent::Log("[Gateway] starting up".to_string()))
         .unwrap();
     let router = axum::Router::new()
         .route("/register", post(register))
-        .route("/command", get(command))
-        .route("/update", post(update));
+        .route("/command/:turtle_id", get(command))
+        .route("/update/:turtle_id", post(update));
     axum::Server::bind(&format!("{}:{}", ip, port).parse().unwrap())
         .serve(router.into_make_service())
         .await
@@ -26,10 +28,14 @@ async fn main() {
 }
 
 async fn update(
-    Query(turtle_id): Query<u128>,
+    Path(turtle_id):Path<String>,
     Json(event): Json<Event>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut nc = nats::connect("nats").unwrap();
+    let turtle_id = match turtle_id.parse::<u128>() {
+        Ok(turtle_id) => turtle_id,
+        Err(_) => return Err(StatusCode::BAD_REQUEST),
+    };
+    let mut nc = nats::connect(NATS).unwrap();
     match event {
         Event::Move(from, to) => {
             EventStream::Turtles
@@ -66,7 +72,7 @@ async fn update(
 }
 
 async fn register(Json(register): Json<RegisterTurtle>) -> Result<String, StatusCode> {
-    let mut nc = nats::connect("nats").unwrap();
+    let mut nc = nats::connect(NATS).unwrap();
     let new_uuid = match Database::NewTurtleID.request(&mut nc) {
         Some(new_uuid) => new_uuid,
         None => return Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -87,8 +93,13 @@ async fn register(Json(register): Json<RegisterTurtle>) -> Result<String, Status
     Ok(new_uuid.to_string())
 }
 
-async fn command(Query(turtle_id): Query<u128>) -> Result<String, StatusCode> {
-    let mut nc = nats::connect("nats").unwrap();
+
+async fn command(Path(turtle_id):Path<String>) -> Result<String, StatusCode> {
+    let turtle_id = match turtle_id.parse::<u128>() {
+        Ok(turtle_id) => turtle_id,
+        Err(_) => return Err(StatusCode::BAD_REQUEST),
+    };
+    let mut nc = nats::connect(NATS).unwrap();
     let command: Option<Command> = match Database::NextCommand(turtle_id).request(&mut nc) {
         Some(command) => command,
         None => return Err(StatusCode::INTERNAL_SERVER_ERROR),
