@@ -9,7 +9,7 @@ use lib::events::{BlockEvent, EventStream, LogEvent, TurtleEvent};
 
 #[tokio::main]
 async fn main() {
-    let ip = std::env::var("IP").unwrap();
+    let ip = String::from("127.0.0.1");
     let port = String::from("8080");
     let mut nc = nats::connect("nats").unwrap();
     EventStream::Logs
