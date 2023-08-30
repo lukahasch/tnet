@@ -19,10 +19,10 @@ async fn main() {
         .route("/register", post(register))
         .route("/command", get(command))
         .route("/update", post(update));
-    tokio::spawn(
-        axum::Server::bind(&format!("{}:{}", ip, port).parse().unwrap())
-            .serve(router.into_make_service()),
-    );
+    axum::Server::bind(&format!("{}:{}", ip, port).parse().unwrap())
+        .serve(router.into_make_service())
+        .await
+        .unwrap();
 }
 
 async fn update(
