@@ -7,7 +7,7 @@ use lib::database::world::{Command, Turtle};
 use lib::database::Database;
 use lib::events::{BlockEvent, EventStream, LogEvent, TurtleEvent};
 
-pub const NATS:&'static str = "127.0.0.1";
+pub const NATS:&'static str = "nats";
 
 #[tokio::main]
 async fn main() {
