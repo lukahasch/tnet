@@ -11,8 +11,6 @@ use lib::events::{BlockEvent, EventStream, LogEvent, TurtleEvent};
 #[macro_use]
 extern crate lazy_static;
 
-//use lazy static to initialize NATS connection
-
 lazy_static! {
     static ref NATS:AtomicPtr<Mutex<nats::Connection>> = AtomicPtr::new({
         let nc = Mutex::new(nats::connect("nats").unwrap());
