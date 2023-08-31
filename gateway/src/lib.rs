@@ -19,4 +19,5 @@ pub enum Event {
     Fuel(u64),
     Direction(Direction),
     Block(Position, Block),
+    Log(String),
 }

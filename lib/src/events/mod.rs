@@ -36,13 +36,4 @@ impl EventStream {
             Err(_) => None,
         }
     }
-
-    pub fn publish(
-        &self,
-        nc: &mut nats::Connection,
-        data: impl serde::Serialize,
-    ) -> std::io::Result<()> {
-        let data = serde_json::to_vec(&data)?;
-        nc.publish(self.topic(), data)
-    }
 }

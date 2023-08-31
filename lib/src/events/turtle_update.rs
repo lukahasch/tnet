@@ -10,3 +10,11 @@ pub enum TurtleEvent {
     Direction(TurtleID, Direction),
     Register(TurtleID),
 }
+
+impl TurtleEvent {
+    pub fn publish(&self, nc: &mut nats::Connection) -> std::io::Result<()> {
+        let subject = "turtle_updates";
+        let data = serde_json::to_vec(self)?;
+        nc.publish(subject, data)
+    }
+}

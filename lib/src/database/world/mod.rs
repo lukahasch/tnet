@@ -25,6 +25,4 @@ pub enum Direction {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Command {
-    
-}
+pub enum Command {}

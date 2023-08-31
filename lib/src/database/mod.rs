@@ -1,36 +1,70 @@
+use self::world::{Command, Turtle, TurtleID};
 pub mod world;
-use self::world::{Turtle, TurtleID};
-use serde::de::DeserializeOwned;
-use serde_derive::{Deserialize, Serialize};
-use std::io;
+use crate::database::world::block::Block;
+use crate::database::world::Position;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Database {
-    NewTurtleID,
-    UpdateTurtle(Turtle),
-    NextCommand(TurtleID),
+macro_rules! db_comm_gem {
+    (
+        $(
+            $name:ident : $($req:tt),* => $resp:ty;
+        )*
+    ) => {
+        use serde_derive::{Deserialize, Serialize};
+        #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+        pub enum DatabaseRequest {
+            $(
+                $name($($req),*),
+            )*
+        }
+
+        $(
+            #[allow(non_snake_case)]
+            pub fn $name(nc:&mut nats::Connection,$($req: $req),*) -> std::io::Result<$resp> {
+                let subject = "database";
+                let data = serde_json::to_vec(&DatabaseRequest::$name($($req),*)).unwrap();
+                let msg = nc.request(subject, data)?;
+                match serde_json::from_slice(&msg.data) {
+                    Ok(data) => Ok(data),
+                    Err(i) => Err(std::io::Error::new(std::io::ErrorKind::Other,format!("Error parsing response: {}",i))),
+                }
+            }
+        )*
+    }
 }
 
-impl Database {
-    pub fn request<R: DeserializeOwned>(&self, nc: &mut nats::Connection) -> Option<R> {
-        let subject = "database";
-        let request = match serde_json::to_vec(self) {
-            Ok(request) => request,
-            Err(_) => return None,
-        };
-        let response = match nc.request(subject, request) {
-            Ok(response) => response,
-            Err(_) => return None,
-        };
-        match serde_json::from_slice(&response.data) {
-            Ok(response) => Some(response),
-            Err(_) => None,
-        }
-    }
+db_comm_gem!(
+    GetTurtle: TurtleID => Option<Turtle>;
+    NewTurtleID: () => TurtleID;
+    SetTurtle: Turtle => ();
+    NextCommand: TurtleID => Option<Command>;
+    SetBlock: Position,Block => ();
+);
 
-    pub fn publish(&self, nc: &mut nats::Connection) -> io::Result<()> {
-        let subject = "database";
-        let data = serde_json::to_vec(self)?;
-        nc.publish(subject, data)
-    }
+#[macro_export]
+macro_rules! request {
+    ($name:ident,$nc:expr,$($arg:expr),*) => {
+        {
+            use lib::database::DatabaseRequest;
+            use lib::database::$name;
+            $name($nc,$($arg),*)
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! update_turtle {
+    ($nc:expr,$id:expr,$($field:ident => $data:expr,)*) => {
+        {
+            move || -> std::io::Result<()> {
+                let mut turtle = match request!(GetTurtle,$nc,$id)? {
+                    Some(turtle) => turtle,
+                    None => return Err(std::io::Error::new(std::io::ErrorKind::Other,"Turtle not found")),
+                };
+                $(
+                    turtle.$field = $data;
+                )*
+                request!(SetTurtle,$nc,turtle)
+            }()
+        }
+    };
 }
