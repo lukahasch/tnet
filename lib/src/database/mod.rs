@@ -1,7 +1,8 @@
-use self::world::{Command, Turtle, TurtleID};
+use self::world::{Command, Turtle, TurtleID, ProzessID};
 pub mod world;
 use crate::database::world::block::Block;
 use crate::database::world::Position;
+use std::time::Duration;
 
 macro_rules! db_comm_gem {
     (
@@ -38,6 +39,17 @@ db_comm_gem!(
     SetTurtle: Turtle => ();
     NextCommand: TurtleID => Option<Command>;
     SetBlock: Position,Block => ();
+    GetBlock: Position => Option<Block>;
+    NewProzessID: () => ProzessID;
+    ClaimTurtle: TurtleID,ProzessID => bool;
+    ReleaseTurtle: TurtleID => ();
+    GetTurtleProzess: TurtleID => Option<ProzessID>;
+    AddTurtleCommand: TurtleID,Command => ();
+    GetTurtleCommands: TurtleID => Option<Vec<Command>>;
+    ClearTurtleCommands: TurtleID => ();
+    ClaimPosition: Position,Duration => ();
+    ReleasePosition: Position => ();
+    GetClaimTime: Position => Duration;
 );
 
 #[macro_export]

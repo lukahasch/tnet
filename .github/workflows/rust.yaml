@@ -1,0 +1,51 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  gateway:
+    name: Gateway
+    # build and test in gateway
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gateway
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build and test
+        run: |
+          cargo build --verbose
+          cargo test --verbose
+  lib:
+    name: Lib
+    # build and test in lib
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lib
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build and test
+        run: |
+          cargo build --verbose
+          cargo test --verbose
+  db_sim:
+    name: DB Simulator
+    # build and test in db_sim
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: db_sim
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build and test
+        run: |
+          cargo build --verbose
+          cargo test --verbose
